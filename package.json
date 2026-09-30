@@ -8,10 +8,16 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
-  "keywords": ["backend", "api", "productos", "coderhouse"],
+  "keywords": [
+    "backend",
+    "api",
+    "productos",
+    "coderhouse"
+  ],
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^18.0.4",
     "express": "^4.21.2",
     "mongoose": "^8.12.1"
   },
