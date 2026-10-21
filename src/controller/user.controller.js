@@ -1,6 +1,5 @@
 import { userService } from '../service/user.service.js';
 import { successResponse } from '../utils/apiResponse.js';
-
 export const getUsers = async (req, res, next) => {
   try {
     const users = await userService.getUsers();

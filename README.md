@@ -1,94 +1,70 @@
 # ShipNow API
 
-API de logística construida con Node.js, Express y MongoDB. Esta versión integra la
-base de las clases 1 y 2: configuración inicial, arquitectura por capas y generación
-de datos ficticios.
+API de logística construida con Node.js, Express y MongoDB. Gestiona usuarios,
+comercios y pedidos con arquitectura por capas, mocks para cargar datos de prueba
+y un manejo centralizado de errores.
 
 ## Entidades
 
-La API trabaja únicamente con estas entidades:
-
-- `User`: usuario del sistema. Roles disponibles: `admin`, `customer` y `store`.
+- `User`: usuario del sistema. Roles: `admin`, `customer` y `store`.
 - `Store`: comercio asociado a un usuario con rol `store`.
-- `Order`: pedido asociado a un usuario `customer` y a un `store`.
+- `Order`: pedido asociado a un `customer` y a un `store`.
 
-No se incluyen entidades `delivery` ni `driver`.
+## Requisitos
 
-## Instalación y configuración
+- Node.js 18 o superior
+- MongoDB local o Atlas
+
+## Instalación
 
 ```bash
 npm install
+cp .env.example .env
 ```
 
-Crear un archivo `.env` en la raíz:
+Completar el `.env`:
 
-```env
-PORT=8080
-MONGODB_URI=mongodb://localhost:27017/shipnow
-```
-
-`MONGODB_URI` es obligatoria. El servidor carga las variables de entorno antes de
-conectarse a MongoDB.
-
-## Ejecución
+| Variable | Uso | Ejemplo |
+| --- | --- | --- |
+| `PORT` | Puerto del servidor | `8080` |
+| `MONGODB_URI` | Conexión a MongoDB (obligatoria) | `mongodb://localhost:27017/shipnow` |
+| `NODE_ENV` | Entorno (`development` o `production`) | `development` |
 
 ```bash
 npm run dev
 ```
 
-Para ejecutar sin nodemon:
+La API queda en `http://localhost:8080` si `PORT=8080`. Sin `PORT` usa `3000`.
 
-```bash
-npm start
-```
+## Scripts
 
-La API queda disponible en `http://localhost:8080`.
-
-## Arquitectura
-
-```text
-routes       -> define endpoints y delega
-controllers  -> recibe request y construye response
-services     -> contiene la lógica de negocio
-repositories -> accede a MongoDB
-models       -> define schemas de Mongoose
-```
-
-Ejemplo del flujo de un pedido:
-
-```text
-orders.router.js
-  -> order.controller.js
-  -> order.service.js
-  -> order.repository.js
-  -> order.model.js
-```
-
-La misma estructura se aplica a `user` y `store`.
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Desarrollo con nodemon |
+| `npm start` | Producción |
 
 ## Respuestas
 
-Respuesta exitosa:
+Éxito:
 
 ```json
-{
-  "status": "success",
-  "payload": {}
-}
+{ "status": "success", "message": "usuario creado", "payload": {} }
 ```
 
-Respuesta de error:
+Algunos endpoints responden solo `{ "status": "success", "payload": {} }`.
+
+Error (middleware global):
 
 ```json
-{
-  "status": "error",
-  "message": "Usuario no encontrado"
-}
+{ "status": "error", "message": "Usuario no encontrado", "code": "USER_NOT_FOUND" }
 ```
 
-## Endpoints principales
+Los controllers de users delegan el error con `next(error)`. El middleware
+traduce `CastError` de Mongoose a `VALIDATION_ERROR` (`ID invalido`).
 
-### Health check
+## Endpoints
+
+### Health
 
 ```http
 GET /health
@@ -104,8 +80,6 @@ PUT    /api/users/:uid
 DELETE /api/users/:uid
 ```
 
-Ejemplo de usuario:
-
 ```json
 {
   "firstName": "Martina",
@@ -115,6 +89,8 @@ Ejemplo de usuario:
   "role": "customer"
 }
 ```
+
+Roles válidos: `admin`, `customer`, `store`. Default: `customer`.
 
 ### Stores
 
@@ -126,7 +102,7 @@ PUT    /api/stores/:sid
 DELETE /api/stores/:sid
 ```
 
-Un store necesita un usuario propietario con rol `store`:
+El `owner` tiene que ser un usuario con rol `store`:
 
 ```json
 {
@@ -146,106 +122,70 @@ PUT    /api/orders/:oid/status
 DELETE /api/orders/:oid
 ```
 
-Ejemplo de pedido:
-
 ```json
 {
   "customer": "ID_DEL_USUARIO_CUSTOMER",
   "store": "ID_DEL_STORE",
   "deliveryAddress": "Av. Siempre Viva 742",
   "items": [
-    {
-      "name": "Caja mediana",
-      "quantity": 2,
-      "price": 1500
-    }
+    { "name": "Caja mediana", "quantity": 2, "price": 1500 }
   ]
 }
 ```
 
-El service calcula el total automáticamente. El estado inicial es `created`.
-Estados disponibles: `created`, `assigned`, `picked_up`, `in_transit`, `delivered` y
-`cancelled`.
+El service calcula el `total`. Estado inicial: `created`.
+Estados: `created`, `assigned`, `picked_up`, `in_transit`, `delivered`, `cancelled`.
 
-## Mocks
+### Mocks
 
-Los mocks generan datos dinámicos usando únicamente `User`, `Store` y `Order`. Cada
-generación crea nuevos IDs. Los endpoints de prueba no guardan datos en MongoDB.
-
-### Usuarios en memoria
+Los GET no guardan nada. `POST /api/mocks/generateData` inserta en Mongo.
 
 ```http
-GET /api/mocks/mockingusers?qty=5
-```
-
-Si no se indica `qty`, genera 10 usuarios `customer`.
-
-### Pedidos en memoria
-
-```http
-GET /api/mocks/mockingorders?qty=5
-```
-
-Genera usuarios `customer`, usuarios `store`, comercios y pedidos relacionados sin
-persistirlos.
-
-### Persistir datos ficticios
-
-```http
+GET  /api/mocks/mockingusers?qty=5
+GET  /api/mocks/mockingorders?qty=5
 POST /api/mocks/generateData
 ```
 
-Body opcional:
+Body opcional de `generateData`:
 
 ```json
-{
-  "users": 5,
-  "stores": 2,
-  "orders": 10
-}
+{ "users": 5, "stores": 2, "orders": 10 }
 ```
 
-Sin body se generan 10 usuarios `customer`, 5 usuarios `store`, 5 stores y 10 orders.
-El resultado de `users` incluye ambos tipos de usuario.
+Sin body: 10 customers, 5 stores (con su usuario `store`) y 10 orders.
+Las cantidades son enteros entre 0 y 400. Para generar pedidos hace falta
+al menos un customer y un store en la misma carga. El email lleva un UUID
+para poder repetir la carga.
 
-Los datos se persisten en este orden:
+## Arquitectura
 
 ```text
-users -> stores -> orders
+routes       -> endpoints, solo delegan
+controller   -> lee la request y arma la respuesta
+service      -> reglas de negocio
+repository   -> acceso a MongoDB
+models       -> schemas de Mongoose
+middlewares  -> 404 y errores
+utils        -> diccionario de errores y helpers de respuesta
 ```
 
-Respuesta de ejemplo:
-
-```json
-{
-  "status": "success",
-  "payload": {
-    "users": 7,
-    "stores": 2,
-    "orders": 10
-  }
-}
-```
-
-Cada usuario generado tiene un email con un identificador aleatorio para permitir cargas repetidas.
-Las cantidades deben ser enteros entre 0 y 400. Para generar pedidos se necesita
-al menos un customer y un store en la misma carga. Las cantidades inv?lidas devuelven HTTP 400 antes de insertar datos.
-
-## Estructura relevante
+Flujo de un pedido:
 
 ```text
-src/
-  app.js
-  server.js
-  config/
-  controller/
-  mocks/
-  models/
-  repository/
-  routes/
-  service/
-  utils/constants.js
+orders.router.js
+  -> order.controller.js
+  -> order.service.js
+  -> order.repository.js
+  -> order.model.js
 ```
 
-La siguiente etapa puede incorporar manejo global de errores, validaciones más completas,
-tests y documentación Swagger.
+**Decisión técnica:** los mensajes y status de error viven en
+`src/utils/errorDictionary.js`. El service lanza `createError(CODE)` y el
+middleware responde `{ status, message, code }`. Así no se repite el texto
+en cada capa y el cliente puede distinguir `USER_NOT_FOUND` de un 404 genérico.
+
+## Postman
+
+Importar `postman/ShipNow-Clase-4.postman_collection.json` y
+`postman/ShipNow-Clase-4.postman_environment.json`. Seleccionar el environment
+**ShipNow Clase-4**. Los POST de creación guardan `userId`, `storeId` y `orderId`.
