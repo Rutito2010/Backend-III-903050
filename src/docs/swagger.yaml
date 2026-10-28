@@ -1,0 +1,207 @@
+tags:
+  - name: Orders
+    description: Géstion de pedidos
+
+paths:
+  /api/orders:
+    get:
+      tags: [Orders]
+      summary: Listar pedidos
+      description: Devuelve los pedidos registrados
+      responses:
+        "200":
+          description: Lista de pedidos obtenido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdersResponse"
+    post:
+      tags: [Orders]
+      summary: Crear un pedido
+      description: Require cliente y tienda existente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Pedido creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "404":
+          description: Cliente o tienda no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Datos, rol del cliente o ID invalidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/orders/{oid}:
+    get:
+      tags: [Orders]
+      summary: Obtener un pedido
+      description: Devuelve un pedido del ID indicado
+      parameters:
+        - in: path
+          name: oid
+          required: true
+          description: ID del pedido que queremos consultar
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pedido encontrado correctamente
+        "404":
+          description: No existe un pedido con ese ID
+        "400":
+          description: El ID no tiene el formato correcto
+
+components:
+  schemas:
+    OrderItem:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Caja mediana
+        quantity:
+          type: number
+          example: 2
+        price:
+          type: number
+          example: 1500
+      required: [name, quantity, price]
+    Customer:
+      type: object
+      properties:
+        _id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    Store:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        owner:
+          type: string
+    OrderRead:
+      type: object
+      properties:
+        _id:
+          type: string
+        customer:
+          $ref: "#/components/schemas/Customer"
+        store:
+          $ref: "#/components/schemas/Store"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        deliverAddress:
+          type: string
+        total:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+    OrdersResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Lista de pedidos
+        payload:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderRead"
+    OrderInput:
+      type: object
+      properties:
+        customer:
+          type: string
+          description: ID de un usuario con rol customer
+          example: 6acf7ff968b188fed334690c
+        store:
+          type: string
+          description: ID de una tienda existente
+          example: 6acf7ff968b188fed334690b
+        deliveryAddress:
+          type: string
+          example: Calle falsa 123
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        priority:
+          type: string
+          enum: [low, normal, high]
+          default: normal
+      required: [customer, store, items, deliveryAddress]
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+        customer:
+          type: string
+        store:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        deliverAddress:
+          type: string
+        total:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+    OrderResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: Pedido creado
+        payload:
+          $ref: "#/components/schemas/Order"
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Pedido no encontrado
+        code:
+          type: string
+          example: ORDER_NOT_FOUND

@@ -33,7 +33,7 @@ export const userService = {
     if (role && !Object.values(USER_ROLES).includes(role)) {
       throw createError(ERROR_CODES.INVALID_USER_ROLE);
     }
-    let user = userRepository.create(userData);
+    const user = await userRepository.create(userData);
 
     logger.info(`User created with ID: ${user._id}`)
     

@@ -1,28 +1,29 @@
 import * as mocksService from '../service/mocks.service.js';
+import { successResponse } from '../utils/apiResponse.js';
 
-export const getMockUsers = async (req, res) => {
+export const getMockUsers = async (req, res, next) => {
   try {
     const quantity = req.query.qty ?? 10;
     const users = await mocksService.generateUsers(quantity);
 
-    res.status(200).json({ status: 'success', payload: users });
+    successResponse(res, { message: 'Usuarios mock generados', payload: users });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
+    next(error);
   }
 };
 
-export const getMockOrders = async (req, res) => {
+export const getMockOrders = async (req, res, next) => {
   try {
     const quantity = req.query.qty ?? 10;
     const orders = await mocksService.generateOrders(quantity);
 
-    res.status(200).json({ status: 'success', payload: orders });
+    successResponse(res, { message: 'Pedidos mock generados', payload: orders });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
+    next(error);
   }
 };
 
-export const generateData = async (req, res) => {
+export const generateData = async (req, res, next) => {
   try {
     const {
       users = 10,
@@ -31,8 +32,8 @@ export const generateData = async (req, res) => {
     } = req.body || {};
     const result = await mocksService.generateData({ users, stores, orders });
 
-    res.status(201).json({ status: 'success', payload: result });
+    successResponse(res, { statusCode: 201, message: 'Datos mock generados', payload: result });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
+    next(error);
   }
 };
